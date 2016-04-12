@@ -66,6 +66,7 @@ class StringBufferReaderImpl < BufferReaderImpl
 
     return @buffer[index-@cur_range.begin] if !@cur_range.nil? && (@cur_range.include? index)
 
+    @file.seek 0
     cur = 0
     data = Array.new
     loop do

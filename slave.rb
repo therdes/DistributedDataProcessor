@@ -16,6 +16,7 @@ class SlaveProcessor
   end
 
   def start(file, data_type)
+    raise 'No such file' unless File.exist? file
     process file, data_type
   end
 
@@ -27,6 +28,3 @@ class SlaveProcessor
     @socket.puts '%s %d' % [ConfigSingleton::STATE[:COMPLETE], result]
   end
 end
-
-slave = SlaveProcessor.new
-slave.start 'buffer_reader_test_string.txt', ConfigSingleton::DATA_TYPE[:STRING]
