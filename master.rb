@@ -1,6 +1,6 @@
 require 'socket'
-require './config'
-require './utils'
+require_relative 'config'
+require_relative 'utils'
 
 include Utils
 class MasterProcessor

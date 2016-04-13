@@ -1,4 +1,5 @@
-require './config'
+require_relative 'config'
+require_relative 'binfile'
 
 raise 'conflict method in IO' if IO.respond_to? :readlines_in_count
 class IO
@@ -30,9 +31,15 @@ class BufferReader
   def [](index)
     @imp[index]
   end
+
+  def close
+    @imp.close
+  end
 end
 
 class BufferReaderImpl
+  MAX_BUFFER = 256
+
   def initialize(file)
   end
 
@@ -41,11 +48,51 @@ class BufferReaderImpl
 
   def [](index)
   end
+
+  def close
+  end
+end
+
+class BinaryBufferReaderImpl < BufferReaderImpl
+  def initialize(file, elem_len)
+    raise 'No such file' unless File.exist? file
+
+    @file = File.open file, mode: 'rb'
+    @count = @file.size / elem_len
+    @element_bytes = elem_len
+    @buffer = Array.new MAX_BUFFER
+    @cur_range = nil
+  end
+
+  def count
+    @count
+  end
+
+  def [](index)
+    raise RangeError if index >= count
+    return @buffer[index-@cur_range.begin] if @cur_range && @cur_range.include?(index)
+
+    cur = 0
+    cur += MAX_BUFFER until cur <= index && (cur+MAX_BUFFER) > index
+    @file.seek cur*MAX_BUFFER
+    count = 0
+    loop do
+      @buffer[count] = BinFile.read_fix_size @file, @element_bytes
+      break if @file.eof?
+      count += 1
+      break if count == MAX_BUFFER
+    end
+
+    @cur_range = (cur...cur+MAX_BUFFER)
+    @buffer[index-cur]
+  end
+
+  def close
+    @file.close
+  end
 end
 
 class StringBufferReaderImpl < BufferReaderImpl
-  MAX_BUFFER = 256
-
   def initialize(file)
     raise 'No such file' unless File.exist? file
 
@@ -62,7 +109,7 @@ class StringBufferReaderImpl < BufferReaderImpl
   end
 
   def [](index)
-    raise RangeError if index > count
+    raise RangeError if index >= count
 
     return @buffer[index-@cur_range.begin] if !@cur_range.nil? && (@cur_range.include? index)
 
@@ -79,10 +126,9 @@ class StringBufferReaderImpl < BufferReaderImpl
 
     @buffer[index-@cur_range.begin]
   end
-end
 
-class BinaryBufferReaderImpl < BufferReaderImpl
-  def initialize(file, elem_len)
-
+  def close
+    @file.close
   end
 end
+
